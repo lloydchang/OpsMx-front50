@@ -19,6 +19,7 @@ package com.netflix.spinnaker.front50.validator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.netflix.spinnaker.front50.model.pipeline.Pipeline;
 import com.netflix.spinnaker.front50.model.pipeline.PipelineDAO;
@@ -26,8 +27,13 @@ import com.netflix.spinnaker.kork.web.exceptions.ValidationException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
+
 import okhttp3.*;
+
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -99,26 +105,31 @@ public class OpenPolicyAgentValidator implements PipelineValidator {
       opaStringResponse = httpResponse.body().string();
       log.info("OPA response: {}", opaStringResponse);
       if (isOpaProxy) {
-        if (httpResponse.code() != 200) {
-          throw new ValidationException(opaStringResponse, null);
-        }
+    	  if (httpResponse.code() == 401 ) {
+				JsonObject opaResponse = gson.fromJson(opaStringResponse, JsonObject.class);
+				StringBuilder denyMessage = new StringBuilder();
+				extractDenyMessage(opaResponse, denyMessage);
+				if (StringUtils.isNotBlank(denyMessage)) {
+					throw new ValidationException(denyMessage.toString(), null);
+				} else {
+					throw new ValidationException("There is no '" + opaResultKey + "' field in the OPA response", null);
+				}
+			} else if (httpResponse.code() != 200 ) {
+				throw new ValidationException(opaStringResponse, null);
+			}
       } else {
-        JsonObject opaResponse = gson.fromJson(opaStringResponse, JsonObject.class);
-        JsonObject opaResult;
-        if (opaResponse.has("result")) {
-          opaResult = opaResponse.get("result").getAsJsonObject();
-          if (opaResult.has(opaResultKey)) {
-            JsonArray resultKey = opaResult.get(opaResultKey).getAsJsonArray();
-            if (resultKey.size() != 0) {
-              throw new ValidationException(resultKey.get(0).getAsString(), null);
-            }
-          } else {
-            throw new ValidationException(
-                "There is no '" + opaResultKey + "' field in the OPA response", null);
-          }
-        } else {
-          throw new ValidationException("There is no 'result' field in the OPA response", null);
-        }
+    	  if (httpResponse.code() == 401 ) {
+				JsonObject opaResponse = gson.fromJson(opaStringResponse, JsonObject.class);
+				StringBuilder denyMessage = new StringBuilder();
+				extractDenyMessage(opaResponse, denyMessage);
+				if (StringUtils.isNotBlank(denyMessage)) {
+					throw new ValidationException(denyMessage.toString(), null);
+				} else {
+					throw new ValidationException("There is no '" + opaResultKey + "' field in the OPA response", null);
+				}
+			} else if (httpResponse.code() != 200 ) {
+				throw new ValidationException(opaStringResponse, null);
+			}
       }
     } catch (IOException e) {
       log.error("Communication exception for OPA at {}: {}", this.opaUrl, e.toString());
@@ -200,4 +211,27 @@ public class OpenPolicyAgentValidator implements PipelineValidator {
     }
     return httpResponse;
   }
+  
+  private void extractDenyMessage(JsonObject opaResponse, StringBuilder messagebuilder) {
+		Set<Entry<String, JsonElement>> fields = opaResponse.entrySet();
+		fields.forEach(field -> {
+			if (field.getKey().equalsIgnoreCase(opaResultKey)) {
+				JsonArray resultKey = field.getValue().getAsJsonArray();
+				if (resultKey.size() != 0) {
+					resultKey.forEach(result -> {
+						if (StringUtils.isNotEmpty(messagebuilder)) {
+							messagebuilder.append(", ");
+						}
+						messagebuilder.append(result.getAsString());
+					});
+				}
+			}else if (field.getValue().isJsonObject()) {
+				extractDenyMessage(field.getValue().getAsJsonObject(), messagebuilder);
+			} else if (field.getValue().isJsonArray()){
+				field.getValue().getAsJsonArray().forEach(obj -> {
+					extractDenyMessage(obj.getAsJsonObject(), messagebuilder);
+				});
+			}
+		});
+	}
 }
