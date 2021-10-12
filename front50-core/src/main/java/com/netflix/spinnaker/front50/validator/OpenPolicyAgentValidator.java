@@ -34,6 +34,9 @@ import java.util.Set;
 import okhttp3.*;
 
 import org.apache.commons.lang3.StringUtils;
+
+import java.util.Optional;
+import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -130,6 +133,7 @@ public class OpenPolicyAgentValidator implements PipelineValidator {
 			} else if (httpResponse.code() != 200 ) {
 				throw new ValidationException(opaStringResponse, null);
 			}
+
       }
     } catch (IOException e) {
       log.error("Communication exception for OPA at {}: {}", this.opaUrl, e.toString());
@@ -234,4 +238,5 @@ public class OpenPolicyAgentValidator implements PipelineValidator {
 			}
 		});
 	}
+
 }
