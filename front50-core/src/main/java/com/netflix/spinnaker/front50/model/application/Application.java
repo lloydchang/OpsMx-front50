@@ -28,6 +28,16 @@ public class Application implements Timestamped {
   private String lastModifiedBy;
   private Object cloudProviders;
   private Map<String, Object> details = new HashMap<>();
+  
+  private Permissions permissions;
+
+  public Permissions getPermissions() {
+    return permissions;
+  }
+
+  public void setPermissions(Permissions permissions) {
+    this.permissions = permissions;
+  }
 
   public String getCloudProviders() {
     // Orca expects a String
@@ -125,6 +135,8 @@ public class Application implements Timestamped {
         + "\'"
         + ", cloudProviders="
         + cloudProviders
+        + ", permissions="
+        + permissions
         + "}";
   }
 
