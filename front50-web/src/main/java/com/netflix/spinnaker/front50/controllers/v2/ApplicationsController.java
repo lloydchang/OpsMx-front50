@@ -119,6 +119,9 @@ public class ApplicationsController {
     if (applicationService.findByName(app.getName()) != null) {
       throw new ApplicationAlreadyExistsException();
     }
+    
+    Permissions appPermissions = app.getPermissions();
+    log.info("#### PERMISSIONS : {}", appPermissions.allGroups());
 
     Application createdApplication = applicationService.save(app);
     if (fiatStatus.isEnabled()
