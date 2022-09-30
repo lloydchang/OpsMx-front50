@@ -338,8 +338,16 @@ public class PipelineController {
                 "Pipeline Templates are not supported with your current storage backend"));
   }
 
-  private void checkForStalePipeline(Pipeline pipeline, ValidatorErrors errors) {
-    Pipeline existingPipeline = pipelineDAO.findById(pipeline.getId());
+  private void checkForStalePipeline(Pipeline pipeline, GenericValidationErrors errors) {
+  Pipeline existingPipeline;
+    try {
+      existingPipeline = pipelineDAO.findById(pipeline.getId());
+    } catch (NotFoundException e) {
+      // Not stale, this pipeline does not exist yet
+      return;
+    }
+
+
     Long storedUpdateTs = existingPipeline.getLastModified();
     Long submittedUpdateTs = pipeline.getLastModified();
     if (!submittedUpdateTs.equals(storedUpdateTs)) {
