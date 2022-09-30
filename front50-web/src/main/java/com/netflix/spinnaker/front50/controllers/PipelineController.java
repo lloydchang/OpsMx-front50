@@ -292,7 +292,15 @@ public class PipelineController {
   }
 
   private void checkForStalePipeline(Pipeline pipeline, GenericValidationErrors errors) {
-    Pipeline existingPipeline = pipelineDAO.findById(pipeline.getId());
+  Pipeline existingPipeline;
+    try {
+      existingPipeline = pipelineDAO.findById(pipeline.getId());
+    } catch (NotFoundException e) {
+      // Not stale, this pipeline does not exist yet
+      return;
+    }
+
+
     Long storedUpdateTs = existingPipeline.getLastModified();
     Long submittedUpdateTs = pipeline.getLastModified();
     if (!submittedUpdateTs.equals(storedUpdateTs)) {
