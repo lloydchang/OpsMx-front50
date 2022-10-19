@@ -21,11 +21,15 @@ import static java.lang.String.format;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import com.netflix.spinnaker.fiat.shared.FiatPermissionEvaluator;
+import com.netflix.spinnaker.fiat.shared.FiatService;
+import com.netflix.spinnaker.fiat.shared.FiatStatus;
 import com.netflix.spinnaker.front50.ServiceAccountsService;
 import com.netflix.spinnaker.front50.api.model.pipeline.Pipeline;
 import com.netflix.spinnaker.front50.api.model.pipeline.Trigger;
 import com.netflix.spinnaker.front50.api.validator.PipelineValidator;
 import com.netflix.spinnaker.front50.api.validator.ValidatorErrors;
+import com.netflix.spinnaker.front50.config.FiatConfigurationProperties;
 import com.netflix.spinnaker.front50.exception.BadRequestException;
 import com.netflix.spinnaker.front50.exceptions.DuplicateEntityException;
 import com.netflix.spinnaker.front50.exceptions.InvalidEntityException;
@@ -36,24 +40,16 @@ import com.netflix.spinnaker.front50.model.pipeline.TemplateConfiguration;
 import com.netflix.spinnaker.front50.model.pipeline.V2TemplateConfiguration;
 import com.netflix.spinnaker.kork.web.exceptions.NotFoundException;
 import com.netflix.spinnaker.kork.web.exceptions.ValidationException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
 
 /** Controller for presets */
 @RestController
@@ -67,17 +63,31 @@ public class PipelineController {
   private final List<PipelineValidator> pipelineValidators;
   private final Optional<PipelineTemplateDAO> pipelineTemplateDAO;
 
+  private final FiatPermissionEvaluator fiatPermissionEvaluator;
+  private final Optional<FiatService> fiatService;
+  private final FiatConfigurationProperties fiatConfigurationProperties;
+  private final FiatStatus fiatStatus;
+
   public PipelineController(
       PipelineDAO pipelineDAO,
       ObjectMapper objectMapper,
       Optional<ServiceAccountsService> serviceAccountsService,
       List<PipelineValidator> pipelineValidators,
-      Optional<PipelineTemplateDAO> pipelineTemplateDAO) {
+      Optional<PipelineTemplateDAO> pipelineTemplateDAO,
+      FiatPermissionEvaluator fiatPermissionEvaluator,
+      Optional<FiatService> fiatService,
+      FiatConfigurationProperties fiatConfigurationProperties,
+      FiatStatus fiatStatus) {
+
     this.pipelineDAO = pipelineDAO;
     this.objectMapper = objectMapper;
     this.serviceAccountsService = serviceAccountsService;
     this.pipelineValidators = pipelineValidators;
     this.pipelineTemplateDAO = pipelineTemplateDAO;
+    this.fiatPermissionEvaluator = fiatPermissionEvaluator;
+    this.fiatService = fiatService;
+    this.fiatConfigurationProperties = fiatConfigurationProperties;
+    this.fiatStatus = fiatStatus;
   }
 
   @PreAuthorize("#restricted ? @fiatPermissionEvaluator.storeWholePermission() : true")
@@ -87,7 +97,11 @@ public class PipelineController {
       @RequestParam(required = false, value = "restricted", defaultValue = "true")
           boolean restricted,
       @RequestParam(required = false, value = "refresh", defaultValue = "true") boolean refresh) {
-    return pipelineDAO.all(refresh);
+    Collection<Pipeline> pipelines = pipelineDAO.all(refresh);
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    pipelines.removeIf(
+        p -> !fiatPermissionEvaluator.hasPermission(auth, p.getName(), "PIPELINE", "READ"));
+    return pipelines;
   }
 
   @PreAuthorize("hasPermission(#application, 'APPLICATION', 'READ')")
@@ -117,16 +131,20 @@ public class PipelineController {
         });
 
     int i = 0;
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     for (Pipeline p : pipelines) {
-      p.setIndex(i);
-      i++;
+      if (fiatPermissionEvaluator.hasPermission(auth, p.getName(), "PIPELINE", "READ")) {
+        p.setIndex(i);
+        i++;
+      }
     }
 
     return pipelines;
   }
 
   @PreAuthorize("@fiatPermissionEvaluator.storeWholePermission()")
-  @PostFilter("hasPermission(filterObject.application, 'APPLICATION', 'READ')")
+  @PostFilter(
+      "hasPermission(filterObject.application, 'APPLICATION', 'READ') and hasPermission(filterObject.name, 'PIPELINE', 'READ')")
   @RequestMapping(value = "{id:.+}/history", method = RequestMethod.GET)
   public Collection<Pipeline> getHistory(
       @PathVariable String id, @RequestParam(value = "limit", defaultValue = "20") int limit) {
@@ -134,7 +152,8 @@ public class PipelineController {
   }
 
   @PreAuthorize("@fiatPermissionEvaluator.storeWholePermission()")
-  @PostAuthorize("hasPermission(returnObject.application, 'APPLICATION', 'READ')")
+  @PostAuthorize(
+      "hasPermission(returnObject.application, 'APPLICATION', 'READ') and hasPermission(returnObject.name, 'PIPELINE', 'READ')")
   @RequestMapping(value = "{id:.+}/get", method = RequestMethod.GET)
   public Pipeline get(@PathVariable String id) {
     return pipelineDAO.findById(id);
@@ -162,7 +181,9 @@ public class PipelineController {
       pipeline.setTriggers(triggers);
     }
 
-    return pipelineDAO.create(pipeline.getId(), pipeline);
+    Pipeline pl = pipelineDAO.create(pipeline.getId(), pipeline);
+    syncRoles();
+    return pl;
   }
 
   @PreAuthorize("@fiatPermissionEvaluator.isAdmin()")
@@ -171,7 +192,8 @@ public class PipelineController {
     pipelineDAO.bulkImport(pipelines);
   }
 
-  @PreAuthorize("hasPermission(#application, 'APPLICATION', 'WRITE')")
+  @PreAuthorize(
+      "hasPermission(#application, 'APPLICATION', 'WRITE') and hasPermission(#pipeline.name, 'PIPELINE', 'WRITE')")
   @RequestMapping(value = "{application}/{pipeline:.+}", method = RequestMethod.DELETE)
   public void delete(@PathVariable String application, @PathVariable String pipeline) {
     String pipelineId = pipelineDAO.getPipelineId(application, pipeline);
@@ -182,6 +204,7 @@ public class PipelineController {
     serviceAccountsService.ifPresent(
         accountsService ->
             accountsService.deleteManagedServiceAccounts(Collections.singletonList(pipelineId)));
+    syncRoles();
   }
 
   public void delete(@PathVariable String id) {
@@ -191,7 +214,8 @@ public class PipelineController {
             accountsService.deleteManagedServiceAccounts(Collections.singletonList(id)));
   }
 
-  @PreAuthorize("hasPermission(#pipeline.application, 'APPLICATION', 'WRITE')")
+  @PreAuthorize(
+      "hasPermission(#pipeline.application, 'APPLICATION', 'WRITE') and hasPermission(#pipeline.name, 'PIPELINE', 'WRITE')")
   @RequestMapping(value = "/{id}", method = RequestMethod.PUT)
   public Pipeline update(
       @PathVariable final String id,
@@ -214,7 +238,7 @@ public class PipelineController {
     pipeline = ensureCronTriggersHaveIdentifier(pipeline);
 
     pipelineDAO.update(id, pipeline);
-
+    syncRoles();
     return pipeline;
   }
 
@@ -329,5 +353,17 @@ public class PipelineController {
     pipeline.setTriggers(triggers);
 
     return pipeline;
+  }
+
+  private void syncRoles() {
+    if (fiatStatus.isEnabled()
+        && fiatConfigurationProperties.getRoleSync().isEnabled()
+        && fiatService.isPresent()) {
+      try {
+        fiatService.get().sync();
+      } catch (Exception e) {
+        log.warn("failed to trigger fiat permission sync", e);
+      }
+    }
   }
 }
