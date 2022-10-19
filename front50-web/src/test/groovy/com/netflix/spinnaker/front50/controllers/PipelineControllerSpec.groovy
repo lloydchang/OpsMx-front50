@@ -7,7 +7,6 @@ import com.netflix.spinnaker.front50.api.validator.ValidatorErrors
 import com.netflix.spinnaker.front50.model.pipeline.PipelineDAO
 import com.netflix.spinnaker.kork.web.exceptions.ExceptionMessageDecorator
 import com.netflix.spinnaker.kork.web.exceptions.GenericExceptionHandlers
-import com.netflix.spinnaker.kork.web.exceptions.NotFoundException
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -113,7 +112,7 @@ class PipelineControllerSpec extends Specification {
           new ObjectMapper(),
           Optional.empty(),
           [new MockValidator()] as List<PipelineValidator>,
-          Optional.empty()
+          Optional.empty(), fiatPermissionEvaluator, fiatService, fiatConfigurationProperties, fiatStatus
         )
       )
       .setControllerAdvice(
