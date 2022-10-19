@@ -121,15 +121,7 @@ public class ApplicationsController {
     }
 
     Application createdApplication = applicationService.save(app);
-    if (fiatStatus.isEnabled()
-        && fiatConfigurationProperties.getRoleSync().isEnabled()
-        && fiatService.isPresent()) {
-      try {
-        fiatService.get().sync();
-      } catch (Exception e) {
-        log.warn("failed to trigger fiat permission sync", e);
-      }
-    }
+    syncRoles();
 
     return createdApplication;
   }
@@ -153,8 +145,10 @@ public class ApplicationsController {
               "Application name '%s' does not match path parameter '%s'",
               app.getName(), applicationName));
     }
+    Application updatedApplication = applicationService.save(app);
+    syncRoles();
 
-    return applicationService.save(app);
+    return updatedApplication;
   }
 
   @PreAuthorize("hasPermission(#app.name, 'APPLICATION', 'WRITE')")
@@ -169,7 +163,10 @@ public class ApplicationsController {
               app.getName(), applicationName));
     }
 
-    return applicationService.replace(app);
+    Application replacedApplication = applicationService.replace(app);
+    syncRoles();
+
+    return replacedApplication;
   }
 
   @PostAuthorize("hasPermission(#applicationName, 'APPLICATION', 'READ')")
@@ -227,5 +224,17 @@ public class ApplicationsController {
     map.put("errors", errorStrings);
     map.put("status", HttpStatus.BAD_REQUEST);
     return map;
+  }
+
+  private void syncRoles() {
+    if (fiatStatus.isEnabled()
+        && fiatConfigurationProperties.getRoleSync().isEnabled()
+        && fiatService.isPresent()) {
+      try {
+        fiatService.get().sync();
+      } catch (Exception e) {
+        log.warn("failed to trigger fiat permission sync", e);
+      }
+    }
   }
 }
