@@ -70,7 +70,7 @@ abstract class PipelineControllerTck extends Specification {
           new ObjectMapper(),
           Optional.of(serviceAccountsService),
           Collections.emptyList(),
-          Optional.empty()
+          Optional.empty(), fiatPermissionEvaluator, fiatService, fiatConfigurationProperties, fiatStatus
         )
       )
       .setControllerAdvice(
