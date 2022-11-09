@@ -99,11 +99,7 @@ public class PipelineController {
       @RequestParam(required = false, value = "restricted", defaultValue = "true")
           boolean restricted,
       @RequestParam(required = false, value = "refresh", defaultValue = "true") boolean refresh) {
-    Collection<Pipeline> pipelines = pipelineDAO.all(refresh);
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    pipelines.removeIf(
-        p -> !fiatPermissionEvaluator.hasPermission(auth, p.getName(), "PIPELINE", "READ"));
-    return pipelines;
+    return pipelineDAO.all(refresh);
   }
 
   @PreAuthorize("hasPermission(#application, 'APPLICATION', 'READ')")
