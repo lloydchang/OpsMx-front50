@@ -161,16 +161,16 @@ public class PipelineController {
   }
 
   @PreAuthorize(
-      "@fiatPermissionEvaluator.storeWholePermission() and hasPermission(#pipeline.application, 'APPLICATION', 'WRITE') and @authorizationSupport.hasRunAsUserPermission(#pipeline)")
+      "@fiatPermissionEvaluator.storeWholePermission() and  hasPermission(#pipeline.application, 'APPLICATION', 'WRITE') and  @authorizationSupport.hasRunAsUserPermission(#pipeline)")
   @RequestMapping(value = "", method = RequestMethod.POST)
   public Pipeline save(
       @RequestBody Pipeline pipeline,
       @RequestParam(value = "staleCheck", required = false, defaultValue = "false")
           Boolean staleCheck) {
-
-    permissionCheck(pipeline);
+    if (staleCheck.equals(true)) {
+      permissionCheck(pipeline);
+    }
     validatePipeline(pipeline, staleCheck);
-
     pipeline.setName(pipeline.getName().trim());
     pipeline = ensureCronTriggersHaveIdentifier(pipeline);
 
@@ -184,9 +184,13 @@ public class PipelineController {
     }
 
     Pipeline pl = pipelineDAO.create(pipeline.getId(), pipeline);
+
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
     syncRoles();
+
     String username = getUsername(auth);
+    log.info("******user name :{}", username);
     if (username != null
         && !username.isEmpty()
         && fiatPermissionEvaluator.hasCachedPermission(username)) {
@@ -196,19 +200,20 @@ public class PipelineController {
   }
 
   private void permissionCheck(Pipeline pipeline) {
+    if (Strings.isNullOrEmpty(pipeline.getId())) {
+      return;
+    }
     String id = pipeline.getId();
-    if (!Strings.isNullOrEmpty(id)) {
-      Pipeline existingPipeline = pipelineDAO.findById(id);
-      if (existingPipeline == null) {
-        return;
-      }
-      Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-      boolean hasPermission =
-          fiatPermissionEvaluator.hasPermission(auth, pipeline.getName(), "PIPELINE", "WRITE");
-      if (!hasPermission) {
-        throw new PipelineAccessDeniedException(
-            "You don't have enough permissions to edit this pipeline!!. Please contact system admin.");
-      }
+    Pipeline existingPipeline = pipelineDAO.findById(id);
+    if (existingPipeline == null) {
+      return;
+    }
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    boolean hasPermission =
+        fiatPermissionEvaluator.hasPermission(auth, pipeline.getName(), "PIPELINE", "WRITE");
+    if (!hasPermission) {
+      throw new PipelineAccessDeniedException(
+          "You don't have enough permissions to edit this pipeline!!. Please contact system admin.");
     }
   }
 
@@ -223,11 +228,6 @@ public class PipelineController {
   @RequestMapping(value = "{application}/{pipeline:.+}", method = RequestMethod.DELETE)
   public void delete(@PathVariable String application, @PathVariable String pipeline) {
     String pipelineId = pipelineDAO.getPipelineId(application, pipeline);
-    log.info(
-        "*************************Deleting pipeline \"{}\" with id {} in application {}",
-        pipeline,
-        pipelineId,
-        application);
     pipelineDAO.delete(pipelineId);
 
     serviceAccountsService.ifPresent(
