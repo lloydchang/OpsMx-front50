@@ -163,7 +163,7 @@ public class PipelineController {
   @PreAuthorize(
       "@fiatPermissionEvaluator.storeWholePermission() and  hasPermission(#pipeline.application, 'APPLICATION', 'WRITE') and  @authorizationSupport.hasRunAsUserPermission(#pipeline)")
   @RequestMapping(value = "", method = RequestMethod.POST)
-  public synchronized Pipeline save(
+  public Pipeline save(
       @RequestBody Pipeline pipeline,
       @RequestParam(value = "staleCheck", required = false, defaultValue = "false")
           Boolean staleCheck) {
@@ -339,14 +339,13 @@ public class PipelineController {
   }
 
   private void checkForStalePipeline(Pipeline pipeline, ValidatorErrors errors) {
-  Pipeline existingPipeline;
+    Pipeline existingPipeline;
     try {
       existingPipeline = pipelineDAO.findById(pipeline.getId());
     } catch (NotFoundException e) {
       // Not stale, this pipeline does not exist yet
       return;
     }
-
 
     Long storedUpdateTs = existingPipeline.getLastModified();
     Long submittedUpdateTs = pipeline.getLastModified();
