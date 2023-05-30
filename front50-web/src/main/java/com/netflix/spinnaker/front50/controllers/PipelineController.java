@@ -190,17 +190,16 @@ public class PipelineController {
     }
 
     Pipeline pl = pipelineDAO.create(pipeline.getId(), pipeline);
-
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (isPipelineRbac) {
       log.debug("Pipeline permission sync");
       syncRoles();
-
+      Authentication auth = SecurityContextHolder.getContext().getAuthentication();
       String username = getUsername(auth);
-      log.info("******user name :{}", username);
+
       if (username != null
           && !username.isEmpty()
           && fiatPermissionEvaluator.hasCachedPermission(username)) {
+        log.debug("Clearing cached permissions for user: {}", username);
         fiatPermissionEvaluator.invalidatePermission(username);
       }
     }
