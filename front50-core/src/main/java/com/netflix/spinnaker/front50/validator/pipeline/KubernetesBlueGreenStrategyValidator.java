@@ -58,6 +58,9 @@ public class KubernetesBlueGreenStrategyValidator implements PipelineValidator {
   }
 
   private static boolean trafficManagementEnabled(Map<String, Object> trafficManagement) {
+    if(trafficManagement == null){
+      return false;
+    }
     return Boolean.TRUE.equals(trafficManagement.get("enabled"));
   }
 
