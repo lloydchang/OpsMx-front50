@@ -119,10 +119,10 @@ public class ApplicationsController {
     if (applicationService.findByName(app.getName()) != null) {
       throw new ApplicationAlreadyExistsException();
     }
-
+    log.info("Application creation Start :{}", new Date());
     Application createdApplication = applicationService.save(app);
     syncRoles();
-
+    log.info("Application creation End:{}", new Date());
     return createdApplication;
   }
 
