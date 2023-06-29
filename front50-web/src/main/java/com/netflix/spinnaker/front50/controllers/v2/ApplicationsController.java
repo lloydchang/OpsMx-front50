@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
@@ -42,6 +43,9 @@ public class ApplicationsController {
   private final FiatConfigurationProperties fiatConfigurationProperties;
   private final FiatStatus fiatStatus;
   private final ApplicationService applicationService;
+
+  @Value("${application.roles.sync:true}")
+  private boolean isApplicationRoleSync;
 
   public ApplicationsController(
       MessageSource messageSource,
@@ -119,10 +123,10 @@ public class ApplicationsController {
     if (applicationService.findByName(app.getName()) != null) {
       throw new ApplicationAlreadyExistsException();
     }
-
+    log.debug("Application creation Start :{}", new Date());
     Application createdApplication = applicationService.save(app);
     syncRoles();
-
+    log.debug("Application creation End:{}", new Date());
     return createdApplication;
   }
 
@@ -229,7 +233,8 @@ public class ApplicationsController {
   private void syncRoles() {
     if (fiatStatus.isEnabled()
         && fiatConfigurationProperties.getRoleSync().isEnabled()
-        && fiatService.isPresent()) {
+        && fiatService.isPresent()
+        && isApplicationRoleSync) {
       try {
         fiatService.get().sync();
       } catch (Exception e) {
