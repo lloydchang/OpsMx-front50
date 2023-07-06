@@ -188,8 +188,20 @@ public class PipelineController {
           .forEach(it -> it.put("id", UUID.randomUUID().toString()));
       pipeline.setTriggers(triggers);
     }
-
-    Pipeline pl = pipelineDAO.create(pipeline.getId(), pipeline);
+    Pipeline pl;
+    int i = 1;
+    boolean retryFlag = true;
+    while (i < 3) {
+      log.info("**********Save pipeline  retry Count :{}", i);
+      try {
+        pl = pipelineDAO.create(pipeline.getId(), pipeline);
+        i = 3;
+      } catch (Exception e) {
+        log.info("Exception occur pipeline save in storage :{}.", e);
+        i++;
+        log.info("Save Pipeline will retry ");
+      }
+    }
     if (isPipelineRbac) {
       log.info("Pipeline permission sync started after saving the pipeline");
       syncRoles();

@@ -235,9 +235,11 @@ public abstract class StorageServiceSupport<T extends Timestamped> {
   }
 
   public void update(String id, T item) {
+    log.info("****************Start of the  Save item in Storage");
     item.setLastModifiedBy(AuthenticatedRequest.getSpinnakerUser().orElse("anonymous"));
     item.setLastModified(System.currentTimeMillis());
     service.storeObject(objectType, buildObjectKey(id), item);
+    log.info("****************End of the  Save item in Storage");
   }
 
   public void delete(String id) {
