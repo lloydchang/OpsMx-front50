@@ -171,6 +171,7 @@ public class PipelineController {
       @RequestBody Pipeline pipeline,
       @RequestParam(value = "staleCheck", required = false, defaultValue = "false")
           Boolean staleCheck) {
+    log.info("*********Start of Pipeline save ");
     log.debug("Pipeline RBAC Config : {}", isPipelineRbac);
     log.debug("Pipeline staleCheck Config : {}", staleCheck);
     if (isPipelineRbac && staleCheck.equals(true)) {
@@ -188,7 +189,7 @@ public class PipelineController {
           .forEach(it -> it.put("id", UUID.randomUUID().toString()));
       pipeline.setTriggers(triggers);
     }
-    Pipeline pl;
+    Pipeline pl = null;
     int i = 1;
     boolean retryFlag = true;
     while (i < 3) {
@@ -218,6 +219,7 @@ public class PipelineController {
     } else {
       log.info("Since pipeline rbac is disabled not calling role sync.");
     }
+    log.info("*********End of Pipeline save ");
     return pl;
   }
 
