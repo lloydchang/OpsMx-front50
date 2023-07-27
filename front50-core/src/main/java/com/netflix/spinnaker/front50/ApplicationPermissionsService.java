@@ -110,6 +110,8 @@ public class ApplicationPermissionsService {
 
   public Permission updateApplicationPermission(
       @Nonnull String appName, @Nonnull Permission newPermission, boolean skipListeners) {
+    log.info("Method updateApplicationPermission : ApplicationPermissionsService");
+    log.info("skipListeners :{}", skipListeners);
     if (skipListeners) {
       return update(appName, newPermission);
     }
@@ -122,6 +124,7 @@ public class ApplicationPermissionsService {
   }
 
   private Permission update(@Nonnull String appName, @Nonnull Permission newPermission) {
+    log.info("Start of the Permission Update :ApplicationPermissionsService");
     try {
       Permission oldPerm = applicationPermissionDAO().findById(appName);
       applicationPermissionDAO().update(appName, newPermission);
@@ -129,6 +132,7 @@ public class ApplicationPermissionsService {
     } catch (NotFoundException e) {
       createApplicationPermission(newPermission);
     }
+    log.info("End of the Permission Update :ApplicationPermissionsService");
     return newPermission;
   }
 
@@ -154,6 +158,7 @@ public class ApplicationPermissionsService {
   }
 
   private void syncUsers(Permission newPermission, Permission oldPermission) {
+    log.info("Start of the syncUsers :ApplicationPermissionsService");
     if (!fiatClientConfigurationProperties.isEnabled() || !fiatService.isPresent()) {
       return;
     }
@@ -182,11 +187,14 @@ public class ApplicationPermissionsService {
 
     if (fiatConfigurationProperties.getRoleSync().isEnabled()) {
       try {
+        log.info("Start of the role sync with roles:{}", roles);
         fiatService.get().sync(new ArrayList<>(roles));
+        log.info("End of the role sync with roles");
       } catch (RetrofitError e) {
         log.warn("Error syncing users", e);
       }
     }
+    log.info("End of the syncUsers :ApplicationPermissionsService");
   }
 
   private ApplicationPermissionDAO applicationPermissionDAO() {

@@ -191,7 +191,6 @@ public class PipelineController {
     }
     Pipeline pl = null;
     int i = 1;
-    boolean retryFlag = true;
     while (i < 3) {
       log.info("**********Save pipeline  retry Count :{}", i);
       try {

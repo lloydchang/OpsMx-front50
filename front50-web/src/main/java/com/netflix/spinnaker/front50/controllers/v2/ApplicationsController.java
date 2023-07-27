@@ -120,13 +120,17 @@ public class ApplicationsController {
   @ApiOperation(value = "", notes = "Create an application")
   @RequestMapping(method = RequestMethod.POST)
   public Application create(@RequestBody final Application app) {
+    log.info("Start of the create Method : ApplicationController", new Date());
     if (applicationService.findByName(app.getName()) != null) {
       throw new ApplicationAlreadyExistsException();
     }
-    log.debug("Application creation Start :{}", new Date());
+    log.info("Application creation Start :{}", new Date());
     Application createdApplication = applicationService.save(app);
+    log.info("Application creation End:{}", new Date());
+    log.info("Sync Roles start:{}", new Date());
     syncRoles();
-    log.debug("Application creation End:{}", new Date());
+    log.info("Sync Roles End:{}", new Date());
+    log.info("End of the create Method : ApplicationController", new Date());
     return createdApplication;
   }
 
@@ -231,15 +235,20 @@ public class ApplicationsController {
   }
 
   private void syncRoles() {
+    log.info("Start of the syncRoles");
+    log.info("Fiat status :{}", fiatStatus.isEnabled());
+    log.info("Fiat RoleSync :{}", fiatConfigurationProperties.getRoleSync().isEnabled());
+    log.info("Fiat Service :{}", fiatService.isPresent());
     if (fiatStatus.isEnabled()
         && fiatConfigurationProperties.getRoleSync().isEnabled()
-        && fiatService.isPresent()
-        && isApplicationRoleSync) {
+        && fiatService.isPresent()) {
       try {
+        log.info("Fiat service Sync Roles invoke");
         fiatService.get().sync();
       } catch (Exception e) {
         log.warn("failed to trigger fiat permission sync", e);
       }
     }
+    log.info("End of the syncRoles");
   }
 }

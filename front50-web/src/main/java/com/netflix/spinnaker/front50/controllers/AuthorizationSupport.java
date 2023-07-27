@@ -82,6 +82,8 @@ public class AuthorizationSupport {
   }
 
   public boolean serviceAccountCanAccessApplication(String runAsUser, String application) {
+    log.info(
+        "***********Service account {} does have access to application {}", runAsUser, application);
     Authentication auth =
         new PreAuthenticatedAuthenticationToken(runAsUser, null, new ArrayList<>());
 
