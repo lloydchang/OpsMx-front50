@@ -190,17 +190,10 @@ public class PipelineController {
       pipeline.setTriggers(triggers);
     }
     Pipeline pl = null;
-    int i = 1;
-    while (i < 3) {
-      log.info("**********Save pipeline  retry Count :{}", i);
-      try {
-        pl = pipelineDAO.create(pipeline.getId(), pipeline);
-        i = 3;
-      } catch (Exception e) {
-        log.info("Exception occur pipeline save in storage :{}.", e);
-        i++;
-        log.info("Save Pipeline will retry ");
-      }
+    try {
+      pl = pipelineDAO.create(pipeline.getId(), pipeline);
+    } catch (Exception e) {
+      log.info("Exception occur pipeline save in storage :{}.", e);
     }
     if (isPipelineRbac) {
       log.info("Pipeline permission sync started after saving the pipeline");
