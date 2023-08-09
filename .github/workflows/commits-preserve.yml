@@ -1,0 +1,36 @@
+name: Update README with Commit
+
+
+on:
+  push:
+    branches:
+      - 1.30.1_v2.28.1
+    paths-ignore:
+      - "*.md"      
+      
+  pull_request:
+    branches:
+    - 1.30.1_v2.28.1
+    types: 
+      - "closed"
+    paths-ignore:
+      - "*.md"
+
+      
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Update README
+        run: |
+          echo -e "\n\n" >> README.md
+          git log -1 --pretty=format:"$(git rev-parse HEAD) | %an | %s | %ad "  --date=short >> README.md          
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add README.md
+          git commit -m "Updating README with brief commit details"
+          git push
