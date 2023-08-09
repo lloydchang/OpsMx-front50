@@ -96,5 +96,10 @@ docker run -d -p9999:80 \
 When running the S3 TCK via an IDE make sure to have env `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY` set to `null` otherwise the tests will timeout, the gradle test task is already configured this way.
 
 
+$${\color{lightblue} Recent \space commits:}$$ 
+
+              CommitID                   |   Author      | Commit Message          | Commit Date
+----------------------------------------------------------------------------------------------------
+
 
 dc30de4970d69e72a991f4ced5a07d871557ec50 | Yugandharkumar | Create commits-preserve.yml | 2023-08-09 
