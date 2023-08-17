@@ -107,3 +107,6 @@ ad43fabc08ea73e329a8f1370c723dce7247eabe | Yugandharkumar | Create commits-prese
 
 
 bdd01414d31d21d25a7ae65bf4e28cee484e4995 | sanopsmx | Added temp fix for disabling the pipeline triggers. | 2023-08-17 
+
+
+d74427e69cffaa5819050103468b526e10832f57 | Sanjeev Thatiparthi | Added temp fix for disabling the pipeline triggers. (#20) | 2023-08-17 
