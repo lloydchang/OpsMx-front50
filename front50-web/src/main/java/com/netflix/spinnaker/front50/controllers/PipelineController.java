@@ -96,8 +96,8 @@ public class PipelineController {
     this.fiatStatus = fiatStatus;
   }
 
-  @PreAuthorize("#restricted ? @fiatPermissionEvaluator.storeWholePermission() : true")
-  @PostFilter("#restricted ? hasPermission(filterObject.name, 'APPLICATION', 'READ') : true")
+  //@PreAuthorize("#restricted ? @fiatPermissionEvaluator.storeWholePermission() : true")
+  //@PostFilter("#restricted ? hasPermission(filterObject.name, 'APPLICATION', 'READ') : true")
   @RequestMapping(value = "", method = RequestMethod.GET)
   public Collection<Pipeline> list(
       @RequestParam(required = false, value = "restricted", defaultValue = "true")
@@ -164,8 +164,8 @@ public class PipelineController {
     return pipelineDAO.findById(id);
   }
 
-  @PreAuthorize(
-      "@fiatPermissionEvaluator.storeWholePermission() and  hasPermission(#pipeline.application, 'APPLICATION', 'WRITE') and  @authorizationSupport.hasRunAsUserPermission(#pipeline)")
+  //@PreAuthorize(
+     // "@fiatPermissionEvaluator.storeWholePermission() and  hasPermission(#pipeline.application, 'APPLICATION', 'WRITE') and  @authorizationSupport.hasRunAsUserPermission(#pipeline)")
   @RequestMapping(value = "", method = RequestMethod.POST)
   public Pipeline save(
       @RequestBody Pipeline pipeline,
