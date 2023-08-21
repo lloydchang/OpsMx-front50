@@ -164,7 +164,7 @@ public class PipelineController {
     return pipelineDAO.findById(id);
   }
 
-  //@PreAuthorize(
+     //@PreAuthorize(
      // "@fiatPermissionEvaluator.storeWholePermission() and  hasPermission(#pipeline.application, 'APPLICATION', 'WRITE') and  @authorizationSupport.hasRunAsUserPermission(#pipeline)")
   @RequestMapping(value = "", method = RequestMethod.POST)
   public Pipeline save(
@@ -213,6 +213,58 @@ public class PipelineController {
     }
     log.info("*********End of Pipeline save ");
     return pl;
+  }
+
+  @RequestMapping(value = "pipelinesList", method = RequestMethod.POST)
+  public String savePipelineList(
+      @RequestBody List<Pipeline> pipelineList,
+      @RequestParam(value = "staleCheck", required = false, defaultValue = "false")
+          Boolean staleCheck) {
+    log.info("*********Start of savePipelineList ");
+    log.debug("Pipeline RBAC Config : {}", isPipelineRbac);
+    log.debug("Pipeline staleCheck Config : {}", staleCheck);
+
+    for (Pipeline pipeline : pipelineList) {
+      if (isPipelineRbac && staleCheck.equals(true)) {
+        permissionCheck(pipeline);
+      }
+      validatePipeline(pipeline, staleCheck);
+      pipeline.setName(pipeline.getName().trim());
+      pipeline = ensureCronTriggersHaveIdentifier(pipeline);
+
+      if (Strings.isNullOrEmpty(pipeline.getId())) {
+        // ensure that cron triggers are assigned a unique identifier for new pipelines
+        List<Trigger> triggers = pipeline.getTriggers();
+        triggers.stream()
+            .filter(it -> "cron".equals(it.getType()))
+            .forEach(it -> it.put("id", UUID.randomUUID().toString()));
+        pipeline.setTriggers(triggers);
+      }
+      Pipeline pl = null;
+      try {
+        pl = pipelineDAO.create(pipeline.getId(), pipeline);
+      } catch (Exception e) {
+        log.info("Exception occur pipeline save in storage :{}.", e);
+      }
+      if (isPipelineRbac) {
+        log.info("Pipeline permission sync started after saving the pipeline");
+        syncRoles();
+        log.info("Pipeline permission sync ended after saving the pipeline");
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = getUsername(auth);
+
+        if (username != null
+            && !username.isEmpty()
+            && fiatPermissionEvaluator.hasCachedPermission(username)) {
+          log.debug("Clearing cached permissions for user: {}", username);
+          fiatPermissionEvaluator.invalidatePermission(username);
+        }
+      } else {
+        log.info("Since pipeline rbac is disabled not calling role sync.");
+      }
+    }
+    log.info("*********End of savePipelineList ");
+    return "savePipelineList done";
   }
 
   private void permissionCheck(Pipeline pipeline) {
