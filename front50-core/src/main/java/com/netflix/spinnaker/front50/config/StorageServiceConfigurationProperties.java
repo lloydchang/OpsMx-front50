@@ -6,6 +6,25 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("storage-service")
 public class StorageServiceConfigurationProperties {
 
+  private int entityTagsRefreshMs = 5;
+
+  public int getEntityTagsRefreshMs() {
+    return entityTagsRefreshMs;
+  }
+
+  public void setEntityTagsRefreshMs(int entityTagsRefreshMs) {
+    this.entityTagsRefreshMs = entityTagsRefreshMs;
+  }
+
+  public boolean isShouldWarmCacheForEntityTags() {
+    return shouldWarmCacheForEntityTags;
+  }
+
+  public void setShouldWarmCacheForEntityTags(boolean shouldWarmCacheForEntityTags) {
+    this.shouldWarmCacheForEntityTags = shouldWarmCacheForEntityTags;
+  }
+
+  private boolean shouldWarmCacheForEntityTags;
   private PerObjectType application = new PerObjectType(20, TimeUnit.MINUTES.toMillis(1));
   private PerObjectType applicationPermission = new PerObjectType(20, TimeUnit.MINUTES.toMillis(1));
   private PerObjectType serviceAccount = new PerObjectType(20, TimeUnit.MINUTES.toMillis(1));
@@ -17,7 +36,9 @@ public class StorageServiceConfigurationProperties {
   private PerObjectType snapshot = new PerObjectType(2, TimeUnit.MINUTES.toMillis(1));
   private PerObjectType deliveryConfig = new PerObjectType(20, TimeUnit.MINUTES.toMillis(1));
   private PerObjectType pluginInfo = new PerObjectType(2, TimeUnit.MINUTES.toMillis(1));
-  private PerObjectType entityTags = new PerObjectType(2, TimeUnit.MINUTES.toMillis(5), false);
+  private PerObjectType entityTags =
+      new PerObjectType(
+          2, TimeUnit.MINUTES.toMillis(getEntityTagsRefreshMs()), isShouldWarmCacheForEntityTags());
 
   public PerObjectType getApplication() {
     return application;
