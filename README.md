@@ -113,3 +113,6 @@ d74427e69cffaa5819050103468b526e10832f57 | Sanjeev Thatiparthi | Added temp fix 
 
 
 27b7787062c475a4b058e762737a197941b5dafe | SusmithaGundu | made entity_tags values configurable (#19) | 2023-09-04 
+
+
+0a9f3f0dae6deb9f0c7648e1f27ca3fa2e320df7 | saitejaopsmx | Update Dockerfile | 2023-09-04 
