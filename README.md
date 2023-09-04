@@ -110,3 +110,6 @@ bdd01414d31d21d25a7ae65bf4e28cee484e4995 | sanopsmx | Added temp fix for disabli
 
 
 d74427e69cffaa5819050103468b526e10832f57 | Sanjeev Thatiparthi | Added temp fix for disabling the pipeline triggers. (#20) | 2023-08-17 
+
+
+27b7787062c475a4b058e762737a197941b5dafe | SusmithaGundu | made entity_tags values configurable (#19) | 2023-09-04 
