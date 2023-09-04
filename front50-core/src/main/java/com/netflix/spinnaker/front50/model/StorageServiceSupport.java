@@ -128,6 +128,10 @@ public abstract class StorageServiceSupport<T extends Timestamped> {
   @PostConstruct
   void startRefresh() {
     if (refreshIntervalMs > 0) {
+      log.info(
+          "entered startRefresh for {},refreshIntervalMs is {} ms",
+          objectType.name(),
+          refreshIntervalMs);
       if (shouldWarmCache) {
         try {
           log.info("Warming Cache");
@@ -141,6 +145,9 @@ public abstract class StorageServiceSupport<T extends Timestamped> {
           .repeat()
           .subscribe(
               interval -> {
+                if (objectType.equals(ObjectType.ENTITY_TAGS)) {
+                  log.info("interval {}s, object type: {}", interval / 1000, objectType.name());
+                }
                 try {
                   long startTime = System.nanoTime();
                   refresh();
