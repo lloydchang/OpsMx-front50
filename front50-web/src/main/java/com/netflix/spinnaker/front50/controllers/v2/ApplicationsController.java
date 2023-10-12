@@ -2,6 +2,9 @@ package com.netflix.spinnaker.front50.controllers.v2;
 
 import static java.lang.String.format;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.netflix.spinnaker.fiat.model.resources.Permissions;
 import com.netflix.spinnaker.fiat.shared.FiatService;
 import com.netflix.spinnaker.fiat.shared.FiatStatus;
 import com.netflix.spinnaker.front50.config.FiatConfigurationProperties;
@@ -38,6 +41,8 @@ public class ApplicationsController {
 
   private final MessageSource messageSource;
   private final ApplicationDAO applicationDAO;
+
+  private final ObjectMapper objectMapper = new ObjectMapper();
   private final Optional<ApplicationPermissionDAO> applicationPermissionDAO;
   private final Optional<FiatService> fiatService;
   private final FiatConfigurationProperties fiatConfigurationProperties;
@@ -128,7 +133,7 @@ public class ApplicationsController {
     Application createdApplication = applicationService.save(app);
     log.info("Application creation End:{}", new Date());
     log.info("Sync Roles start:{}", new Date());
-    syncRoles();
+    syncOnlyIfRolesPresent(createdApplication.details(), createdApplication.getName());
     log.info("Sync Roles End:{}", new Date());
     log.info("End of the create Method : ApplicationController", new Date());
     return createdApplication;
@@ -250,5 +255,37 @@ public class ApplicationsController {
       }
     }
     log.info("End of the syncRoles");
+  }
+
+  private void syncOnlyIfRolesPresent(Map<String, Object> obj, String appName) {
+
+    log.info("Start of the syncOnlyIfRolesPresent");
+    List<String> roles = new ArrayList<>();
+    if (obj.get("permission") != null) {
+      Application.Permission permissions =
+          objectMapper.convertValue(
+              obj.get("permission"), new TypeReference<Application.Permission>() {});
+      Permissions permission = permissions.getPermissions();
+      if (permission != null && permission.isRestricted()) {
+        roles.addAll(permission.allGroups());
+      }
+      log.info("roles :{} in application name :{}", roles, appName);
+      log.info("roles size :{}", roles.size());
+      log.info("Fiat status :{}", fiatStatus.isEnabled());
+      log.info("Fiat RoleSync :{}", fiatConfigurationProperties.getRoleSync().isEnabled());
+      log.info("Fiat Service :{}", fiatService.isPresent());
+      if (fiatStatus.isEnabled()
+          && fiatConfigurationProperties.getRoleSync().isEnabled()
+          && fiatService.isPresent()
+          && !roles.isEmpty()) {
+        try {
+          log.info("Fiat service syncOnlyIfRolesPresent invoke");
+          fiatService.get().sync(roles);
+        } catch (Exception e) {
+          log.warn("failed to trigger fiat permission sync", e);
+        }
+      }
+      log.info("End of the syncOnlyIfRolesPresent");
+    }
   }
 }
