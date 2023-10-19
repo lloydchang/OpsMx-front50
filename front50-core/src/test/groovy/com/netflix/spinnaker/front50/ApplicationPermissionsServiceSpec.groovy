@@ -48,8 +48,6 @@ class ApplicationPermissionsServiceSpec extends Specification {
 
     where:
     permission                                                  | expectedSyncedRoles
-    appPermission(null)                                         | []
-    appPermission(Permissions.EMPTY)                            | []
     appPermission(permissions(Authorization.WRITE, "my_group")) | ["my_group"]
   }
 
