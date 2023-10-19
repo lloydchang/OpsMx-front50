@@ -154,7 +154,6 @@ public class ApplicationsController {
               app.getName(), applicationName));
     }
     Application updatedApplication = applicationService.save(app);
-    syncRoles();
 
     return updatedApplication;
   }
